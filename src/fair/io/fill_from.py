@@ -19,6 +19,7 @@ from ..interface import fill
 from ..structure.units import (
     compound_convert,
     desired_concentration_units,
+    desired_distance_units,
     desired_emissions_units,
     mixing_ratio_convert,
     prefix_convert,
@@ -132,7 +133,7 @@ def _concentration_unit_convert(concentration, unit, specie):
 
 
 def fill_from_csv(
-    self, emissions_file=None, concentration_file=None, forcing_file=None
+    self, emissions_file=None, concentration_file=None, distance_file=None, forcing_file=None
 ):
     """Fill emissions, concentration and/or forcing from a CSV file.
 
@@ -154,12 +155,15 @@ def fill_from_csv(
         filename of emissions to fill.
     concentration_file : str
         filename of concentrations to fill.
+    distance_file : str
+        filename of distances to fill.
     forcing_file : str
         filename of effective radiative forcing to fill.
     """
     mode_options = {
         "emissions": {"file": emissions_file, "var": self.emissions},
         "concentration": {"file": concentration_file, "var": self.concentration},
+        "distance": {"file": distance_file, "var": self.distance},
         "forcing": {"file": forcing_file, "var": self.forcing},
     }
     for mode in mode_options:
@@ -177,13 +181,14 @@ def fill_from_pandas(self, mode, df):
     Parameters
     ----------
     mode : str
-        can be "emissions", "concentration" or "forcing"
+        can be "emissions", "concentration", "distance" or "forcing"
     df : pd.DataFrame
         data for the infilling
     """
     mode_time = {
         "emissions": self.timepoints,
         "concentration": self.timebounds,
+        "distance":self.timepoints,
         "forcing": self.timebounds,
     }
 
@@ -191,50 +196,83 @@ def fill_from_pandas(self, mode, df):
     times = _check_csv(df, runmode=mode)  # list of strings
     times_array = np.array(times, dtype=float)
 
-    for scenario in self.scenarios:
-        for specie in self.species:
-            if self.properties_df.loc[specie, "input_mode"] == mode:
-                # Grab raw emissions from dataframe
-                data_in = df.loc[
-                    (df["scenario"] == scenario)
-                    & (df["variable"] == specie)
-                    & (df["region"].str.lower() == "world"),
-                    times[0] : times[-1],
-                ].values
+    if mode == "distance":
+        # distance is a special case - it's not per-species, just per-scenario
+        for scenario in self.scenarios:
+            data_in = df.loc[
+                (df["scenario"] == scenario)
+                & (df["variable"] == "distance")
+                & (df["region"].str.lower() == "world"),
+                times[0] : times[-1],
+            ].values
 
-                # duplicates are ambigious and are an error
-                if data_in.shape[0] > 1:
-                    raise DuplicateScenarioError(
-                        f"Input data for {mode} contains duplicate "
-                        f"rows for variable='{specie}, scenario='{scenario}'."
-                    )
-                # now cast to 1D
-                data_in = data_in.squeeze()
+            # duplicates are ambigious and are an error
+            if data_in.shape[0] > 1:
+                raise DuplicateScenarioError(
+                    f"Input data for {mode} contains duplicate "
+                    f"rows for scenario='{scenario}'."
+                )
+            # now cast to 1D
+            data_in = data_in.squeeze()
 
-                # interpolate from the supplied file to our desired timepoints
-                interpolator = interp1d(times_array, data_in, bounds_error=False)
-                data = interpolator(mode_time[mode])
+            # interpolate from the supplied file to our desired timepoints
+            interpolator = interp1d(times_array, data_in, bounds_error=False)
+            data = interpolator(mode_time[mode])
 
-                # Parse and possibly convert unit in input to what FaIR wants
-                unit = df.loc[
-                    (df["scenario"] == scenario)
-                    & (df["variable"] == specie)
-                    & (df["region"].str.lower() == "world"),
-                    "unit",
-                ].values[0]
-                is_ghg = self.properties_df.loc[specie, "greenhouse_gas"]
-                if mode == "emissions":
-                    data = _emissions_unit_convert(data, unit, specie, is_ghg)
-                elif mode == "concentration":
-                    data = _concentration_unit_convert(data, unit, specie)
-
-                # fill FaIR xarray
+            # fill FaIR xarray
+            # assign per config to avoid broadcasting issues
+            for config in self.configs:
                 fill(
                     getattr(self, mode),
-                    data[:, None],
-                    specie=specie,
+                    data,
                     scenario=scenario,
+                    config=config,
                 )
+    else:
+        for scenario in self.scenarios:
+            for specie in self.species:
+                if self.properties_df.loc[specie, "input_mode"] == mode:
+                    # Grab raw emissions from dataframe
+                    data_in = df.loc[
+                        (df["scenario"] == scenario)
+                        & (df["variable"] == specie)
+                        & (df["region"].str.lower() == "world"),
+                        times[0] : times[-1],
+                    ].values
+
+                    # duplicates are ambigious and are an error
+                    if data_in.shape[0] > 1:
+                        raise DuplicateScenarioError(
+                            f"Input data for {mode} contains duplicate "
+                            f"rows for variable='{specie}, scenario='{scenario}'."
+                        )
+                    # now cast to 1D
+                    data_in = data_in.squeeze()
+
+                    # interpolate from the supplied file to our desired timepoints
+                    interpolator = interp1d(times_array, data_in, bounds_error=False)
+                    data = interpolator(mode_time[mode])
+
+                    # Parse and possibly convert unit in input to what FaIR wants
+                    unit = df.loc[
+                        (df["scenario"] == scenario)
+                        & (df["variable"] == specie)
+                        & (df["region"].str.lower() == "world"),
+                        "unit",
+                    ].values[0]
+                    is_ghg = self.properties_df.loc[specie, "greenhouse_gas"]
+                    if mode == "emissions":
+                        data = _emissions_unit_convert(data, unit, specie, is_ghg)
+                    elif mode == "concentration":
+                        data = _concentration_unit_convert(data, unit, specie)
+
+                    # fill FaIR xarray
+                    fill(
+                        getattr(self, mode),
+                        data[:, None],
+                        specie=specie,
+                        scenario=scenario,
+                    )
 
 
 # TO DO: make part of fill_from_csv

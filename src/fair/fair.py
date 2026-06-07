@@ -190,7 +190,7 @@ class FAIR:
                 "organic carbon", "other slcf", "nox aviation", "eesc", "ozone",
                 "ari", "aci", "contrails", "lapsi", "h2o stratospheric", "land use",
                 "volcanic", "solar", "unspecified",
-            ``input_mode`` : {'emissions', 'concentration', 'forcing', 'calculated'}
+            ``input_mode`` : {'emissions', 'concentration', 'distance', 'forcing', 'calculated'}
                 describes how the specie is input into the model.
             ``greenhouse_gas`` : bool
                 is the specie a greenhouse gas?
@@ -272,6 +272,18 @@ class FAIR:
                 )
 
         # driver/output variables
+        self.distance = xr.DataArray(
+            np.ones(
+                (
+                    self._n_timepoints,
+                    self._n_scenarios,
+                    self._n_configs,
+                )
+            )
+            * np.nan,
+            coords=(self.timepoints, self.scenarios, self.configs),
+            dims=("timepoints", "scenario", "config"),
+        )
         self.emissions = xr.DataArray(
             np.ones(
                 (
@@ -1098,6 +1110,7 @@ class FAIR:
         )
         cumulative_emissions_array = self.cumulative_emissions.data
         deep_ocean_efficacy_array = self.climate_configs["deep_ocean_efficacy"].data
+        distance_array = self.distance.data #TODO: set up distance input file
         emissions_array = self.emissions.data
         erfari_radiative_efficiency_array = self.species_configs[
             "erfari_radiative_efficiency"
@@ -1504,12 +1517,12 @@ class FAIR:
                     self._aerosol_chemistry_from_concentration_indices,
                 )
 
-            # 10. contrails forcing from NOx emissions
+            # 10. contrails forcing from aviation flown distance, which is treated like an emission
             if self._routine_flags["contrails"]:
                 forcing_array[
                     i_timepoint + 1 : i_timepoint + 2, ..., self._contrails_indices
                 ] = calculate_linear_forcing(
-                    emissions_array[i_timepoint : i_timepoint + 1, ...],
+                    distance_array[i_timepoint : i_timepoint + 1, ...],
                     0,
                     forcing_scale_array[None, None, ..., self._contrails_indices],
                     contrails_radiative_efficiency_array[None, None, ...],
@@ -1526,7 +1539,6 @@ class FAIR:
                     lapsi_radiative_efficiency_array[None, None, ...],
                 )
 
-            # 12. concentration to stratospheric water vapour forcing
             # 12. concentration to stratospheric water vapour forcing
             if self._routine_flags["h2o stratospheric"]:
                 forcing_array[
