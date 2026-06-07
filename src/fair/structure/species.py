@@ -47,7 +47,7 @@ valid_input_modes = {
     "ozone": ["calculated", "forcing"],
     "ari": ["calculated", "forcing"],
     "aci": ["calculated", "forcing"],
-    "contrails": ["calculated", "forcing"],
+    "contrails": ["distance", "forcing"],
     "lapsi": ["calculated", "forcing"],
     "h2o stratospheric": ["calculated", "forcing"],
     "land use": ["calculated", "forcing"],

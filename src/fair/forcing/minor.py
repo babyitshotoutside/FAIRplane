@@ -10,6 +10,7 @@ def calculate_linear_forcing(
     baseline_driver,
     forcing_scaling,
     radiative_efficiency,
+    contrails=False
 ):
     r"""
     Calculate effective radiative forcing from a linear relationship.
@@ -26,15 +27,22 @@ def calculate_linear_forcing(
     radiative_efficiency : np.ndarray
         radiative efficiency (W m\ :sup:`-2` (<driver unit>)\ :sup:`-1`) of each
         species.
+    contrails : bool
+        if calculating forcing for contrails, we do not sum across species, since 
+        forcing is scaled using distance which is species specific.
 
     Returns
     -------
     erf_out : np.ndarray
         effective radiative forcing (W m\ :sup:`-2`)
     """
-    erf_out = np.nansum(
-        ((driver - baseline_driver) * radiative_efficiency) * forcing_scaling,
-        axis=SPECIES_AXIS,
-        keepdims=True,
-    )
+
+    if contrails:
+        erf_out = (driver - baseline_driver) * radiative_efficiency * forcing_scaling
+    else:
+        erf_out = np.nansum(
+            ((driver - baseline_driver) * radiative_efficiency) * forcing_scaling,
+            axis=SPECIES_AXIS,
+            keepdims=True,
+        )
     return erf_out

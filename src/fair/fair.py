@@ -768,6 +768,10 @@ class FAIR:
                 n_nan = np.isnan(self.forcing.loc[dict(specie=specie)]).sum()
                 if n_nan > 0:
                     _raise_if_nan(specie, "forcing")
+            elif self.properties[specie]["input_mode"] == "distance":
+                n_nan = np.isnan(self.distance.data).sum()
+                if n_nan > 0:
+                    _raise_if_nan(specie, "distance")
 
         # same for if we are prescribing temperature; we must have non-nan
         # values in the surface level
@@ -915,7 +919,6 @@ class FAIR:
             "ari",
             "aci",
             "ozone",
-            "contrails",
             "lapsi",
             "land use",
             "h2o stratospheric",
@@ -927,6 +930,13 @@ class FAIR:
                 ]["type"]
             ):
                 self._routine_flags[flag] = True
+
+        if "contrails" in list(
+            self.properties_df.loc[
+                self.properties_df["input_mode"] == "distance"
+            ]["type"]
+        ):
+            self._routine_flags["contrails"] = True
 
         # if at least one GHG is emissions, concentration or calculated from
         # precursor emissions, we want to run the forcing calculation
@@ -1522,10 +1532,11 @@ class FAIR:
                 forcing_array[
                     i_timepoint + 1 : i_timepoint + 2, ..., self._contrails_indices
                 ] = calculate_linear_forcing(
-                    distance_array[i_timepoint : i_timepoint + 1, ...],
+                    distance_array[i_timepoint : i_timepoint + 1, ..., None],
                     0,
                     forcing_scale_array[None, None, ..., self._contrails_indices],
-                    contrails_radiative_efficiency_array[None, None, ...],
+                    contrails_radiative_efficiency_array[None, None, ..., self._contrails_indices],
+                    contrails=True,
                 )
 
             # 11. LAPSI forcing from BC and OC emissions
@@ -1537,6 +1548,7 @@ class FAIR:
                     baseline_emissions_array[None, None, ...],
                     forcing_scale_array[None, None, ..., self._lapsi_indices],
                     lapsi_radiative_efficiency_array[None, None, ...],
+                    contrails=False,
                 )
 
             # 12. concentration to stratospheric water vapour forcing
@@ -1548,6 +1560,7 @@ class FAIR:
                     baseline_concentration_array[None, None, ...],
                     forcing_scale_array[None, None, ..., self._h2ostrat_indices],
                     h2o_stratospheric_factor_array[None, None, ...],
+                    contrails=False,
                 )
 
             # 13. CO2 cumulative emissions to land use change forcing
@@ -1559,6 +1572,7 @@ class FAIR:
                     0,
                     forcing_scale_array[None, None, ..., self._landuse_indices],
                     land_use_cumulative_emissions_to_forcing_array[None, None, ...],
+                    contrails=False,
                 )
 
             # 14. apply temperature-forcing feedback here.

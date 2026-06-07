@@ -68,7 +68,7 @@ def _check_csv(df, runmode):
     return times
 
 
-def _parse_unit(unit, specie, is_ghg):
+def _parse_unit(unit, specie, is_ghg): #TODO: Unit distance check
     try:
         prefix = unit.split()[0]
         compound = unit.split()[1].split("/")[0]

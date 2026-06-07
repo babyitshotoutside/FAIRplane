@@ -219,6 +219,26 @@ def test__check_properties_raise_if_nan():
         ftest._check_properties()
 
 
+def test_contrails_distance_drives_forcing():
+    fair_obj = FAIR()
+    species, properties = read_properties(species=["Contrails"])
+    properties["Contrails"]["input_mode"] = "distance"
+    fair_obj.define_species(species, properties)
+    fair_obj.define_time(2000, 2002, 1)
+    fair_obj.define_scenarios(["historical"])
+    fair_obj.define_configs(["config1"])
+    fair_obj.allocate()
+    fair_obj.distance[:] = 1.0
+    fair_obj.temperature[0, :, :, 0] = 0.0
+    fair_obj.species_configs["contrails_radiative_efficiency"][0, 0] = 0.5
+    fair_obj.run(progress=False)
+
+    np.testing.assert_allclose(
+        fair_obj.forcing[1, 0, 0, 0], 0.5, atol=1e-8
+    )
+    assert fair_obj._routine_flags["contrails"] is True
+
+
 def test_run_runtime_warning():
     # need to run stochastic (to trigger the problem in the first place) and at a
     # big enough time step to trigger the warning but not too big, else the matrix

@@ -8,3 +8,4 @@ Sulfur,sulfur,emissions,0,1,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,64.069,nan
 Volcanic,volcanic,forcing,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,0,nan
 Aerosol-radiation interactions,ari,calculated,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,0,nan
 Aerosol-cloud interactions,aci,calculated,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,-1.03057237,0,0,nan
+Contrails,contrails,distance,0,0,0,nan,nan,nan,nan,nan,nan,nan,nan,0,1,0,1,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,nan,9.36E-13,nan,nan,nan,nan,nan,nan,nan,nan,nan,0,0,nan

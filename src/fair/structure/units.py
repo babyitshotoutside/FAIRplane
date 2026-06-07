@@ -85,7 +85,6 @@ desired_distance_units = {
     "distance": "km"
 }
 
-
 #: Desired concentration units for each default specie.
 desired_concentration_units = {
     "CO2": "ppm",
