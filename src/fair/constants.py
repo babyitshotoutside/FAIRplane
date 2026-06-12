@@ -20,3 +20,6 @@ SPECIES_AXIS = 3
 #: Axis of atmopsheric gas box for the gas partition data array in full emissions to
 #: concentration mode.
 GASBOX_AXIS = 4
+
+# Distance scaling factor
+DISTANCE_SCALING_FACTOR = 1.17

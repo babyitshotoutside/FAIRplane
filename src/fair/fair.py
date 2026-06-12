@@ -8,7 +8,7 @@ import pandas as pd
 import xarray as xr
 from tqdm.auto import tqdm
 
-from .constants import SPECIES_AXIS, TIME_AXIS
+from .constants import SPECIES_AXIS, TIME_AXIS, DISTANCE_SCALING_FACTOR
 from .earth_params import (
     earth_radius,
     mass_atmosphere,
@@ -1551,7 +1551,7 @@ class FAIR:
                 forcing_array[
                     i_timepoint + 1 : i_timepoint + 2, ..., self._contrails_indices
                 ] = calculate_linear_forcing(
-                    distance_array[i_timepoint : i_timepoint + 1, ..., None],
+                    distance_array[i_timepoint : i_timepoint + 1, ..., None] * DISTANCE_SCALING_FACTOR,
                     0,
                     forcing_scale_array[None, None, ..., self._contrails_indices],
                     contrails_radiative_efficiency_array[None, None, ...],
