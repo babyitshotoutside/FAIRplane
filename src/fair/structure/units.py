@@ -78,6 +78,7 @@ desired_emissions_units = {
     "HFC-365mfc": "kt HFC365mfc/yr",
     "HFC-4310mee": "kt HFC4310mee/yr",
     "NOx aviation": "Mt NO2/yr",
+    "H2O aviation": "Mt H2O/yr"
 }
 
 #: Desired distance units 

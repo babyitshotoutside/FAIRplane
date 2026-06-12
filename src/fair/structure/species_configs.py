@@ -20,6 +20,7 @@ SPECIES_CONFIGS_EXCL_GASBOX = [
     "contrails_radiative_efficiency",
     "erfari_radiative_efficiency",
     "h2o_stratospheric_factor",
+    "h2o_aviation_radiative_efficiency",
     "lapsi_radiative_efficiency",
     "land_use_cumulative_emissions_to_forcing",
     "ozone_radiative_efficiency",

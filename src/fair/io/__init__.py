@@ -63,6 +63,7 @@ _default_ghg_and_slcfs = [
     "HFC-365mfc",
     "HFC-4310mee",
     "NOx aviation",
+    "H2O aviation",
 ]
 
 

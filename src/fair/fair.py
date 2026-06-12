@@ -187,7 +187,7 @@ class FAIR:
                 the type of specie that is being provided. Valid inputs are
                 "co2 ffi", "co2 afolu", "co2", "ch4", "n2o", "cfc-11",
                 "other halogen", "f-gas", "sulfur", "black carbon",
-                "organic carbon", "other slcf", "nox aviation", "eesc", "ozone",
+                "organic carbon", "other slcf", "nox aviation", "h2o aviation", "eesc", "ozone",
                 "ari", "aci", "contrails", "lapsi", "h2o stratospheric", "land use",
                 "volcanic", "solar", "unspecified",
             ``input_mode`` : {'emissions', 'concentration', 'distance', 'forcing', 'calculated'}
@@ -544,6 +544,10 @@ class FAIR:
                     ["config", "specie"],
                     np.zeros((self._n_configs, self._n_species)),
                 ),
+                "h2o_aviation_radiative_efficiency": (
+                    ["config", "specie"],
+                    np.zeros((self._n_configs, self._n_species)),
+                ),
                 # specific parameters for aerosol-cloud interactions
                 "aci_scale": (
                     ["config"],
@@ -589,6 +593,8 @@ class FAIR:
         df = pd.read_csv(filename, index_col=0)
         for specie in self.species:
             for config in SPECIES_CONFIGS_EXCL_GASBOX:
+                if config not in df.columns:
+                    continue
                 fill(
                     self.species_configs[config],
                     df.loc[specie, config],
@@ -938,6 +944,13 @@ class FAIR:
         ):
             self._routine_flags["contrails"] = True
 
+        if "h2o aviation" in list(
+            self.properties_df.loc[
+                self.properties_df["input_mode"] == "emissions"
+            ]["type"]
+        ):
+            self._routine_flags["h2o aviation"] = True
+
         # if at least one GHG is emissions, concentration or calculated from
         # precursor emissions, we want to run the forcing calculation
         if (
@@ -1006,6 +1019,9 @@ class FAIR:
         )
         self._h2ostrat_indices = np.asarray(
             self.properties_df["type"] == "h2o stratospheric", dtype=bool
+        )
+        self._aviation_h2o_indices = np.asarray(
+            self.properties_df["type"] == "h2o aviation", dtype=bool
         )
         self._eesc_indices = np.asarray(
             self.properties_df["type"] == "eesc", dtype=bool
@@ -1120,7 +1136,7 @@ class FAIR:
         )
         cumulative_emissions_array = self.cumulative_emissions.data
         deep_ocean_efficacy_array = self.climate_configs["deep_ocean_efficacy"].data
-        distance_array = self.distance.data #TODO: set up distance input file
+        distance_array = self.distance.data
         emissions_array = self.emissions.data
         erfari_radiative_efficiency_array = self.species_configs[
             "erfari_radiative_efficiency"
@@ -1151,6 +1167,9 @@ class FAIR:
         ].data
         h2o_stratospheric_factor_array = self.species_configs[
             "h2o_stratospheric_factor"
+        ].data
+        h2o_aviation_radiative_efficiency_array = self.species_configs[
+            "h2o_aviation_radiative_efficiency"
         ].data
         iirf_0_array = self.species_configs["iirf_0"].data
         iirf_airborne_array = self.species_configs["iirf_airborne"].data
@@ -1535,11 +1554,21 @@ class FAIR:
                     distance_array[i_timepoint : i_timepoint + 1, ..., None],
                     0,
                     forcing_scale_array[None, None, ..., self._contrails_indices],
-                    contrails_radiative_efficiency_array[None, None, ..., self._contrails_indices],
-                    contrails=True,
+                    contrails_radiative_efficiency_array[None, None, ...],
                 )
 
-            # 11. LAPSI forcing from BC and OC emissions
+            # 11. H2O aviation forcing from aviation water vapour emissions
+            if self._routine_flags["h2o aviation"]:
+                forcing_array[
+                    i_timepoint + 1 : i_timepoint + 2, ..., self._aviation_h2o_indices
+                ] = calculate_linear_forcing(
+                    emissions_array[i_timepoint : i_timepoint + 1, ...],
+                    baseline_emissions_array[None, None, ...],
+                    forcing_scale_array[None, None, ..., self._aviation_h2o_indices],
+                    h2o_aviation_radiative_efficiency_array[None, None, ...],
+                )
+
+            # 12. LAPSI forcing from BC and OC emissions
             if self._routine_flags["lapsi"]:
                 forcing_array[
                     i_timepoint + 1 : i_timepoint + 2, ..., self._lapsi_indices
@@ -1548,7 +1577,6 @@ class FAIR:
                     baseline_emissions_array[None, None, ...],
                     forcing_scale_array[None, None, ..., self._lapsi_indices],
                     lapsi_radiative_efficiency_array[None, None, ...],
-                    contrails=False,
                 )
 
             # 12. concentration to stratospheric water vapour forcing
@@ -1560,7 +1588,6 @@ class FAIR:
                     baseline_concentration_array[None, None, ...],
                     forcing_scale_array[None, None, ..., self._h2ostrat_indices],
                     h2o_stratospheric_factor_array[None, None, ...],
-                    contrails=False,
                 )
 
             # 13. CO2 cumulative emissions to land use change forcing
@@ -1572,7 +1599,6 @@ class FAIR:
                     0,
                     forcing_scale_array[None, None, ..., self._landuse_indices],
                     land_use_cumulative_emissions_to_forcing_array[None, None, ...],
-                    contrails=False,
                 )
 
             # 14. apply temperature-forcing feedback here.

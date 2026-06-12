@@ -1,4 +1,4 @@
-Scenario,Region,Variable,Unit,2000,2050
-historic,World,CH4,ppb,1800,1800
-historic,World,N2O,ppb,325,325
+Scenario,Region,Variable,Unit,1940,2000,2050
+historic,World,CH4,ppb,1800,1800,1800
+historic,World,N2O,ppb,325,325,325
 
